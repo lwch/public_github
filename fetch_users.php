@@ -15,7 +15,7 @@ $users_path = __DIR__.'/users';
 @unlink($users_path);
 $start_time = time();
 fetch($start, $end);
-echo 'use: ', (time() - $start), "\n";
+echo 'use: ', (time() - $start_time), "\n";
 
 function rg($start, $end) {
     do {
@@ -31,7 +31,7 @@ function rg($start, $end) {
         $body = json_decode($body, true);
         echo '  cnt: ', $body['total_count'], "\n";
         if ($body['total_count'] <= 1000) return array($end, $body['total_count']);
-        $end = ($start + $end) >> 1;
+        $end = ($start >> 1) + ($end >> 1);
         if ($end <= $start) return array(null, 0);
     } while (1);
 }
@@ -73,8 +73,6 @@ function fetch_range($start, $end) {
     echo '=============================== starting [', $s, ' - ', $e, '] ==========================', "\n";
     do {
         list($status, $header, $body) = curl_get($url);
-        echo 'status: ', $status, "\n";
-        echo 'url: ', $url, "\n\n";
         if ($status != 200) continue;
         $body = json_decode($body, true);
         parse($body);

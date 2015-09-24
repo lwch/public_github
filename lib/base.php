@@ -9,7 +9,6 @@ function curl_get($url) {
     ));
     $ret = curl_exec($curl);
     $status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-    if ($status == 0) echo 'error: ', curl_error($curl), "\n";
     $header_len = curl_getinfo($curl, CURLINFO_HEADER_SIZE);
     $header = array();
     foreach (explode("\r\n", substr($ret, 0, $header_len)) as $row) {
