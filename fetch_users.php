@@ -2,7 +2,7 @@
 require __DIR__.'/config.php';
 require __DIR__.'/lib/base.php';
 
-define('FORK', 2);
+define('FORK', 10);
 
 date_default_timezone_set('America/Los_Angeles');
 
@@ -70,8 +70,11 @@ function fetch_range($start, $end) {
     $s = date('Y-m-d\TH:i:sO', $start);
     $e = date('Y-m-d\TH:i:sO', $end);
     $url = "https://api.github.com/search/users?q=created:$s..$e&sort=joined&per_page=100&access_token=".GITHUB_TOKEN;
+    echo '=============================== starting [', $s, ' - ', $e, '] ==========================', "\n";
     do {
         list($status, $header, $body) = curl_get($url);
+        echo 'status: ', $status, "\n";
+        echo 'url: ', $url, "\n\n";
         if ($status != 200) continue;
         $body = json_decode($body, true);
         parse($body);

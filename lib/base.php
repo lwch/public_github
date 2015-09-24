@@ -1,12 +1,15 @@
 <?php
 function curl_get($url) {
     $curl = curl_init();
-    curl_setopt($curl, CURLOPT_URL, $url);
-    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($curl, CURLOPT_HEADER, true);
-    curl_setopt($curl, CURLOPT_USERAGENT, 'made from https://github.com/lwch/public_github');
+    curl_setopt_array($curl, array(
+        CURLOPT_URL            => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HEADER         => true,
+        CURLOPT_USERAGENT      => 'made from https://github.com/lwch/public_github'
+    ));
     $ret = curl_exec($curl);
     $status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    if ($status == 0) echo 'error: ', curl_error($curl), "\n";
     $header_len = curl_getinfo($curl, CURLINFO_HEADER_SIZE);
     $header = array();
     foreach (explode("\r\n", substr($ret, 0, $header_len)) as $row) {
