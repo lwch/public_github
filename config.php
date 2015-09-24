@@ -1,2 +1,3 @@
 <?php
-define('GITHUB_TOKEN', 'xxxxxxxxxxxxxxxx'); # add from settings->Personal access tokens
+define('GITHUB_USER', 'xxxx');
+define('GITHUB_PASS', 'xxxx');
