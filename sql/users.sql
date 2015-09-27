@@ -1,0 +1,22 @@
+CREATE TABLE `users`(
+    `id` int(11) NOT NULL,
+    `created` timestamp NOT NULL,
+    `updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `name` varchar(40) NOT NULL,
+    `avatar_url` text NOT NULL,
+    `company` text,
+    `blog` text,
+    `location` text,
+    `email` text,
+    `public_repos` int(11) NOT NULL DEFAULT 0,
+    `public_gists` int(11) NOT NULL DEFAULT 0,
+    `followers` int(11) NOT NULL DEFAULT 0,
+    `following` int(11) NOT NULL DEFAULT 0,
+    `admin` tinyint(1) NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    KEY `idx_created`(`created`),
+    KEY `idx_updated`(`updated`),
+    KEY `idx_name`(`name`),
+    KEY `public_repos`(`public_repos`),
+    KEY `followers`(`followers`)
+)Engine=MyISAM DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;
