@@ -23,6 +23,29 @@ function curl_get($url) {
     curl_close($curl);
     return array($status, $header, $body);
 }
+function made_token($uid) {
+    do {
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_URL            => 'https://api.github.com/authorizations',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HEADER         => false,
+            CURLOPT_USERAGENT      => 'made from https://github.com/lwch/public_github',
+            CURLOPT_POSTFIELDS     => json_encode(array(
+                'note'          => 'fortest',
+                'client_id'     => GITHUB_CLIENT_ID,
+                'client_secret' => GITHUB_CLIENT_SECRET,
+                'fingerprint'   => 'u'.$uid
+            )),
+            CURLOPT_USERPWD        => GITHUB_USER.':'.GITHUB_PASS
+        ));
+        $ret = curl_exec($curl);
+        $status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        if ($status != 201) continue;
+        $ret = json_decode($ret, true);
+        return $ret['token'];
+    } while (1);
+}
 function parse_link($link) {
     $ret = array();
     foreach (explode(',', $link) as $row) {

@@ -2,7 +2,7 @@
 require __DIR__.'/config.php';
 require __DIR__.'/lib/base.php';
 
-define('FORK', 10);
+define('FORK', 5);
 
 date_default_timezone_set('America/Los_Angeles');
 
@@ -19,6 +19,7 @@ echo 'use: ', (time() - $start_time), "\n";
 
 function rg($start, $end) {
     do {
+        if ($start == $end) return array(null, 0);
         $s = date('Y-m-d\TH:i:sO', $start);
         $e = date('Y-m-d\TH:i:sO', $end);
         echo 'scan: ', $s, ' - ', $e, "\n";
@@ -31,7 +32,7 @@ function rg($start, $end) {
         $body = json_decode($body, true);
         echo '  cnt: ', $body['total_count'], "\n";
         if ($body['total_count'] <= 1000) return array($end, $body['total_count']);
-        $end = ($start >> 1) + ($end >> 1);
+        $end = (($end - $start) >> 1) + $start;
         if ($end <= $start) return array(null, 0);
     } while (1);
 }
@@ -80,43 +81,9 @@ function fetch_range($start, $end) {
             $link = parse_link($header['Link']);
             if (!isset($link['next'])) break;
             $url = $link['next'];
-            syslog(LOG_INFO, "next: $url");
         } else break;
     } while (1);
 }
-
-/*
-function fetch($start, $end) {
-    $s = date('Y-m-d\TH:i:sO', $start);
-    $e = date('Y-m-d\TH:i:sO', $end);
-    $save = $end;
-    $url = "https://api.github.com/search/users?q=created:$s..$e&sort=joined&access_token=".GITHUB_TOKEN;
-    $redo = false;
-    $cnt = 0;
-    do {
-        list($status, $header, $body) = curl_get($url);
-        if ($status != 200) continue;
-        $body = json_decode($body, true);
-        if ($body['total_count'] > 1000) {
-            $end = ($start + $end) >> 1;
-            $e = date('Y-m-d\TH:i:sO', $end);
-            $url = "https://api.github.com/search/users?q=created:$s..$e&sort=joined&access_token=".GITHUB_TOKEN;
-            $redo = true;
-            syslog(LOG_INFO, "redo: $s..$e");
-            continue;
-        }
-        $cnt += parse($body);
-        if (isset($header['Link'])) {
-            $link = parse_link($header['Link']);
-            if (!isset($link['next'])) break;
-            $url = $link['next'];
-            syslog(LOG_INFO, "next: $url");
-        } else break;
-    } while (1);
-    syslog(LOG_INFO, "count: $cnt");
-    if ($redo) fetch($end, $save);
-}
-*/
 
 function parse($body) {
     global $users_path;
