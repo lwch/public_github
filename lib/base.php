@@ -63,3 +63,33 @@ function parse_link($link) {
     }
     return $ret;
 }
+function context() {
+    static $context;
+    if (empty($context)) $context = new Context();
+    return $context;
+}
+function db() {
+    static $pdo;
+    if (empty($pdo)) {
+        $dsn = 'mysql:host='.DB_HOST.';dbname='.DB_NAME;
+        try {
+            $pdo = new PDO($dsn, DB_USER, DB_PASS);
+        } catch (PDOException $e) {
+            echo 'ERR: can not connect to db', "\n";
+            exit;
+        }
+    }
+    return $pdo;
+}
+function insert_or_update($pdo, $table, $obj) {
+    $sql = "INSERT INTO `$table`(`".implode('`,`', array_keys($obj))."`) VALUES(";
+    $update = array();
+    foreach ($obj as $k => $v) {
+        $obj[$k] = $pdo->quote($v);
+        $update[] = "`$k` = VALUES(`$k`)";
+    }
+    $sql .= implode(',', array_values($obj)).") ON DUPLICATE KEY UPDATE ".implode(',', $update);
+    return $pdo->exec($sql);
+}
+require __DIR__.'/context.php';
+require __DIR__.'/worker.php';
