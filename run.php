@@ -1,8 +1,9 @@
 <?php
+ini_set('memory_limit', -1);
 require __DIR__.'/config.php';
 require __DIR__.'/lib/base.php';
 
-define('FORK', 2);
+define('FORK', 5);
 
 date_default_timezone_set('America/Los_Angeles');
 
@@ -11,12 +12,35 @@ openlog('public_github', LOG_ODELAY | LOG_PID, LOG_LOCAL7);
 $start = 0;
 $end   = time();
 $users_path = __DIR__.'/users';
-$global_queue = msg_get_queue(ftok(__FILE__, 'a'), 0666); # tell main worker task
+$main_queue = msg_get_queue(ftok(__FILE__, 'a') + 1, 0666); # tell main worker task
+$req_queue  = msg_get_queue(ftok(__FILE__, 'a') + 2, 0666); # request for a task
+$rep_queue  = msg_get_queue(ftok(__FILE__, 'a') + 3, 0666); # reply a task
+
+##############################################################################
+# for test
+
+$pdo = db();
+$sql = 'TRUNCATE TABLE `users`';
+$pdo->exec($sql);
+$sql = 'TRUNCATE TABLE `followers`';
+$pdo->exec($sql);
+
+##############################################################################
 
 @unlink($users_path);
 $start_time = time();
 fetch($start, $end);
 echo 'use: ', (time() - $start_time), "\n";
+
+function pre_do($worker) {
+    $task = $worker->fetch_task();
+    if ($task !== null) { # one task recved from worker
+        context()->push_task($task);
+    }
+    if ($worker->reply_task()) { # want task
+        $worker->get_task_rep(context()->pop_task());
+    }
+}
 
 function rg($worker, $start, $end) {
     do {
@@ -42,21 +66,16 @@ function rg($worker, $start, $end) {
         if ($body['total_count'] <= 1000) return array($end, $body['total_count']);
         $end = (($end - $start) >> 1) + $start;
         if ($end <= $start) return array(null, 0);
-        $task = $worker->fetch_task();
-        if ($task !== null) { # one task recved from worker
-            context()->push_task($task);
-        }
-        if ($worker->reply_task()) { # want task
-            $worker->get_task_rep(context()->pop());
-        }
+        pre_do($worker);
+        context()->keep_task_count();
     } while (1);
 }
 
 function fetch($start, $end) {
     $finished = false;
     $total = 0;
-    global $global_queue;
-    $worker = new Worker($global_queue, true);
+    global $main_queue, $req_queue, $rep_queue;
+    $worker = new Worker($main_queue, $req_queue, $rep_queue, true);
     while (!$finished) {
         $tasks = array();
         do {
@@ -75,11 +94,19 @@ function fetch($start, $end) {
             echo 'do: ', date('Y-m-d H:i:s', $s), ' - ', date('Y-m-d H:i:s', $e), "\n";
             $pid = pcntl_fork();
             if ($pid == 0) {
-                fetch_range($global_queue, $s, $e);
+                fetch_range($main_queue, $req_queue, $rep_queue, $s, $e);
                 exit;
             } else $pids[] = $pid;
         }
-        foreach ($pids as $pid) if ($pid) pcntl_waitpid($pid, $status);
+        while (count($pids)) {
+            $pid = array_shift($pids);
+            if ($pid) {
+                $rc = pcntl_waitpid($pid, $statusi, WNOHANG | WUNTRACED);
+                if ($rc == 0) $pids[] = $pid;
+                pre_do($worker);
+                context()->keep_task_count();
+            }
+        }
         syslog(LOG_INFO, $total.' users fetched');
     }
     syslog(LOG_INFO, 'redo task rep');
@@ -88,12 +115,12 @@ function fetch($start, $end) {
     }
     syslog(LOG_INFO, 'finish task queue');
     while (context()->task_count()) {
-        context()->run_task(context()->pop_task);
+        context()->run_task(context()->pop_task());
     }
 }
 
-function fetch_range($queue, $start, $end) {
-    $worker = new Worker($queue, false);
+function fetch_range($main_queue, $req_queue, $rep_queue, $start, $end) {
+    $worker = new Worker($main_queue, $req_queue, $rep_queue, false);
     $s = date('Y-m-d\TH:i:sO', $start);
     $e = date('Y-m-d\TH:i:sO', $end);
     $url = "https://api.github.com/search/users?q=created:$s..$e&sort=joined&per_page=100&access_token=".GITHUB_TOKEN;
@@ -105,6 +132,11 @@ function fetch_range($queue, $start, $end) {
             break;
         case 403:
             echo 'do task', "\n";
+            $task = context()->pop_task();
+            if ($task) { # if ther is some task in queue do that
+                context()->run_task($task);
+                continue 2;
+            }
             $worker->get_task_req();
             $task = $worker->fetch_task();
             if ($task) context()->run_task($task);
@@ -121,12 +153,17 @@ function fetch_range($queue, $start, $end) {
             $url = $link['next'];
         } else break;
     } while (1);
+    while ($task = context()->pop_task()) {
+        $worker->append_task($task);
+    }
 }
 
 function parse($worker, $body) {
     global $users_path;
     foreach ($body['items'] as $row) {
+        echo '.';
         $task = new TaskUserDetail($row['id'], $row['login'], $row['url'], $row['followers_url'], $row['repos_url']);
         $worker->append_task($task);
     }
+    echo "\n";
 }

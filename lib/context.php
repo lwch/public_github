@@ -25,16 +25,20 @@ class Context {
 
     public function run_task($task) {
         if ($task === null) return true;
-var_dump($task);
         if (!$task->run() and !$task->err_callback()) return false;
         return true;
     }
 
     public function keep_task_count() {
         if (!KEEP_TASKQUEUE_LENGTH) return;
-        while ($this->task_count() > TASKQUEUE_MAX_LENGTH) {
-            $task = $this->pop_task();
-            $this->run_task($task);
+        if ($this->task_count() > TASKQUEUE_MAX_LENGTH) {
+            echo 'queue too long', "\n";
+            $i = 0; $pre = floor(TASKQUEUE_MAX_LENGTH / 20);
+            while ($this->task_count() > TASKQUEUE_MAX_LENGTH) {
+                $task = $this->pop_task();
+                $this->run_task($task);
+                if (++$i % $pre == 0) echo '  now length: ', $this->task_count(), "\n";
+            }
         }
     }
 }
