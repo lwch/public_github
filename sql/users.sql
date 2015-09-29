@@ -1,6 +1,6 @@
 CREATE TABLE `users`(
     `id` int(11) NOT NULL,
-    `created` timestamp NOT NULL,
+    `created` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
     `updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `name` varchar(40) NOT NULL,
     `avatar_url` text NOT NULL,
