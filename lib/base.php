@@ -69,15 +69,13 @@ function context() {
     return $context;
 }
 function db() {
-    static $pdo;
-    if (empty($pdo)) {
-        $dsn = 'mysql:host='.DB_HOST.';dbname='.DB_NAME;
-        try {
-            $pdo = new PDO($dsn, DB_USER, DB_PASS);
-        } catch (PDOException $e) {
-            echo 'ERR: can not connect to db', "\n";
-            exit;
-        }
+    $dsn = 'mysql:host='.DB_HOST.';dbname='.DB_NAME;
+    try {
+        $pdo = new PDO($dsn, DB_USER, DB_PASS);
+    } catch (PDOException $e) {
+        echo 'ERR: can not connect to db', "\n";
+        var_dump($e);
+        exit;
     }
     return $pdo;
 }
