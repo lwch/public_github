@@ -3,7 +3,7 @@ ini_set('memory_limit', -1);
 require __DIR__.'/config.php';
 require __DIR__.'/lib/base.php';
 
-define('FORK', 5);
+define('FORK', 2);
 
 date_default_timezone_set('America/Los_Angeles');
 
@@ -54,7 +54,7 @@ function rg($worker, $start, $end) {
         case 200:
             break;
         case 403:
-            echo 'do task', "\n";
+            echo 'do task: ', getmypid(), "\n";
             context()->run_task(context()->pop_task());
             continue 2;
         default:
@@ -131,7 +131,7 @@ function fetch_range($main_queue, $req_queue, $rep_queue, $start, $end) {
         case 200:
             break;
         case 403:
-            echo 'do task', "\n";
+            echo 'do task: ', getmypid(), "\n";
             $task = context()->pop_task();
             if ($task) { # if ther is some task in queue do that
                 context()->run_task($task);
@@ -160,10 +160,13 @@ function fetch_range($main_queue, $req_queue, $rep_queue, $start, $end) {
 
 function parse($worker, $body) {
     global $users_path;
+    $names = array();
     foreach ($body['items'] as $row) {
+        if (in_array($row['login'], $names)) continue;
         echo '.';
         $task = new TaskUserDetail($row['id'], $row['login'], $row['url'], $row['followers_url'], $row['repos_url']);
         $worker->append_task($task);
+        $names[] = $row['login'];
     }
     echo "\n";
 }

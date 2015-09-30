@@ -37,7 +37,7 @@ class TaskUserFollowers extends Task {
                 $this->err_no = static::$err_crashed;
                 return false;
             }
-            context()->push_task(new TaskUserDetail($row['id'], $row['login'], $row['url'], $row['followers_url'], $row['repos_url']));
+            #context()->push_task(new TaskUserDetail($row['id'], $row['login'], $row['url'], $row['followers_url'], $row['repos_url']));
         }
         return true;
     }
