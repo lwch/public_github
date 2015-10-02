@@ -89,5 +89,22 @@ function insert_or_update($pdo, $table, $obj) {
     $sql .= implode(',', array_values($obj)).") ON DUPLICATE KEY UPDATE ".implode(',', $update);
     return $pdo->exec($sql);
 }
+function prepare_path() {
+    if (!is_dir(__DIR__.'/../status')) mkdir(__DIR__.'/../status', 0774, true);
+    if (!is_dir(__DIR__.'/../run')) mkdir(__DIR__.'/../run', 0774, true);
+}
+function last_id($path, $default) {
+    if (!is_file($path)) {
+        file_put_contents($path, $default);
+        return $default;
+    }
+    return file_get_contents($path);
+}
+function log_status($path, $status) {
+    file_put_contents($path, $status);
+}
+function log_run($path, $append) {
+    file_put_contents($path, $append, FILE_APPEND);
+}
 require __DIR__.'/context.php';
 require __DIR__.'/worker.php';

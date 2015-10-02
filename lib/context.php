@@ -32,7 +32,6 @@ class Context {
     public function keep_task_count() {
         if (!KEEP_TASKQUEUE_LENGTH) return;
         if ($this->task_count() > TASKQUEUE_MAX_LENGTH) {
-            echo 'queue too long', "\n";
             $i = 0; $pre = floor(TASKQUEUE_MAX_LENGTH / 20);
             while ($this->task_count() > TASKQUEUE_MAX_LENGTH) {
                 $task = $this->pop_task();
