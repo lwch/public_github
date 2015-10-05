@@ -22,7 +22,7 @@ log_run(RUN_FILE_PATH, $log);
 
 $pdo = db();
 
-$url = "https://api.github.com/users?since=$since&access_token=".GITHUB_TOKEN;
+$url = "https://api.github.com/users?since=$since&access_token=".GITHUB_LIST_USERS_TOKEN;
 $i = 0; $total = 0;
 $start = time();
 do {
@@ -41,7 +41,6 @@ do {
     parse_str(parse_url($url, PHP_URL_QUERY), $out);
     if (isset($out['since'])) log_status(STATUS_FILE_PATH, $out['since']);
 } while (1);
-@unlink(__DIR__.'/status/list_users.lst', 1);
 echo 'use of time: ', (time() - $start), "\n";
 
 function parse($pdo, $body) {
