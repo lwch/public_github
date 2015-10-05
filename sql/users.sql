@@ -17,6 +17,6 @@ CREATE TABLE `users`(
     KEY `idx_created`(`created`),
     KEY `idx_updated`(`updated`),
     KEY `idx_name`(`name`),
-    KEY `public_repos`(`public_repos`),
-    KEY `followers`(`followers`)
+    KEY `idx_public_repos`(`public_repos`),
+    KEY `idx_followers`(`followers`)
 )Engine=MyISAM DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;
