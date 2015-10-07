@@ -41,6 +41,7 @@ function update($pdo, $name) {
     $total = 0;
     do {
         list($status, $header, $body) = curl_get($url);
+        if ($status == 404) break;
         if ($status != 200) continue;
         $body = json_decode($body, true);
         foreach ($body as $row) {
