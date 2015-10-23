@@ -1,4 +1,4 @@
-CREATE TABLE `repos`(
+CREATE TABLE `repos_log`(
     `id` int(11) NOT NULL,
     `uid` int(11) NOT NULL,
     `uname` varchar(40) NOT NULL,

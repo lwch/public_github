@@ -35,7 +35,7 @@ function parse($header, $body) {
     global $repos, $users;
     $pdo = pdo();
     foreach ($body['items'] as $item) {
-        $sql = "SELECT COUNT(1) FROM `repos` WHERE `id` = '${item['id']}' AND UNIX_TIMESTAMP(`pushed`) = UNIX_TIMESTAMP('${item['pushed_at']}')";
+        $sql = "SELECT COUNT(1) FROM `repos_log` WHERE `id` = '${item['id']}' AND UNIX_TIMESTAMP(`pushed`) = UNIX_TIMESTAMP('${item['pushed_at']}')";
         list($cnt) = $pdo->query($sql)->fetch(PDO::FETCH_NUM);
         if ($cnt) continue; # skip
         $repo = array(
@@ -56,7 +56,7 @@ function parse($header, $body) {
             'forks_cnt'   => $item['forks_count'],
             'language'    => $item['language']
         );
-        insert('repos', $repo);
+        insert('repos_log', $repo);
         $user = array(
             'id'          => $item['owner']['id'],
             'name'        => $item['owner']['login']
