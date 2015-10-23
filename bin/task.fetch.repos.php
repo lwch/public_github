@@ -33,7 +33,11 @@ function fetch($start, $end) {
 }
 function parse($header, $body) {
     global $repos, $users;
+    $pdo = pdo();
     foreach ($body['items'] as $item) {
+        $sql = "SELECT COUNT(1) FROM `repos` WHERE `id` = '${item['id']}' AND UNIX_TIMESTAMP(`pushed`) = UNIX_TIMESTAMP('${item['pushed_at']}')";
+        list($cnt) = $pdo->query($sql)->fetch(PDO::FETCH_NUM);
+        if ($cnt) continue; # skip
         $repo = array(
             'id'          => $item['id'],
             'uid'         => $item['owner']['id'],
