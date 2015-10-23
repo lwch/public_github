@@ -61,7 +61,7 @@ function parse($header, $body) {
             'id'          => $item['owner']['id'],
             'name'        => $item['owner']['login']
         );
-        $users[$user['id']] = $user;
+        insert_or_update('users', $user);
     }
     if (isset($header['Link'])) {
         $link = parse_link($header['Link']);

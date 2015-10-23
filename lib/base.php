@@ -64,3 +64,14 @@ function insert($table, $obj) {
     $sql .= ' VALUES('.implode(',', $obj).')';
     return $pdo->exec($sql);
 }
+function insert_or_update($table, $obj) {
+    $pdo = pdo();
+    $sql = "INSERT INTO `$table`(`".implode('`,`', array_keys($obj))."`) VALUES(";
+    $update = array();
+    foreach ($obj as $k => $v) {
+        $obj[$k] = $pdo->quote($v);
+        $update[] = "`$k` = VALUES(`$k`)";
+    }
+    $sql .= implode(',', array_values($obj)).") ON DUPLICATE KEY UPDATE ".implode(',', $update);
+    return $pdo->exec($sql);
+}
