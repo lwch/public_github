@@ -15,6 +15,7 @@ CREATE TABLE `repos_log`(
     `forks_cnt` int(11) DEFAULT 0,
     `stars_cnt` int(11) DEFAULT 0,
     `watch_cnt` int(11) DEFAULT 0,
+    KEY `idx_id`(`id`),
     KEY `idx_created`(`created`),
     KEY `idx_updated`(`updated`),
     KEY `idx_name`(`uname`, `name`),
