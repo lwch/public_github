@@ -40,13 +40,17 @@ $repos = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 $filter = array();
 foreach ($repos as $row) {
     $row['rank'] = rank($row, $max_forks, $max_stars, $max_watch, $max_cnt);
-    $row['rank'] = sprintf('%.06f', $row['rank']);
-    if ($row['rank'] >= 0.2) $filter[] = $row;
+    $row['rank'] = (int)($row['rank'] * 1000000);
+    if ($row['rank'] >= 200000) $filter[] = $row;
 }
 usort($filter, function($a, $b) {
     return $a['rank'] < $b['rank'] ? 1 : -1;
 });
+$begin = time() - 7 * 24 * 3600;
 foreach ($filter as $row) {
+    $sql = "SELECT COUNT(1) FROM `pushed_log` WHERE `src_id` = '${row['id']}' AND `pushed` >= '$begin'";
+    list($cnt) = $pdo->query($sql)->fetch(PDO::FETCH_NUM);
+    if ($cnt) continue;
     $str = output_repo($row);
     do {
         list($status, $header, $body) = curl_post('https://api.github.com/markdown?access_token='.GITHUB_FETCH_REPOS_TOKEN, json_encode(array(
@@ -54,6 +58,16 @@ foreach ($filter as $row) {
         )));
     } while ($status != 200);
     create_post($cookie, $cookie_name, $row['full_name'], $body, array($row['language']));
+    $obj = array(
+        'src_id'    => $row['id'],
+        'full_name' => $row['full_name'],
+        'language'  => $row['language'],
+        'forks_cnt' => $row['forks_cnt'],
+        'stars_cnt' => $row['stars_cnt'],
+        'watch_cnt' => $row['watch_cnt'],
+        'rank'      => $row['rank']
+    );
+    insert('pushed_log', $obj);
 }
 
 function rank($obj, $max_forks, $max_stars, $max_watch, $max_cnt) {
