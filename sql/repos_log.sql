@@ -8,6 +8,7 @@ CREATE TABLE `repos_log`(
     `name` varchar(100) NOT NULL,
     `full_name` varchar(150) NOT NULL,
     `description` text,
+    `default_branch` varchar(20) NOT NULL,
     `private` tinyint(1) DEFAULT 0,
     `fork` tinyint(1) DEFAULT 1,
     `homepage` text,

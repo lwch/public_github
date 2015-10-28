@@ -1,2 +1,3 @@
 PATH=$PATH:/usr/local/bin
-*/1 * * * * root /etc/cron.d/task.sh task.fetch.repos.php > /tmp/log
+*/1 * * * * root /etc/cron.d/task.sh task.fetch.repos.php
+0   * * * * root /etc/cron.d/task.sh task.push.repos.php
