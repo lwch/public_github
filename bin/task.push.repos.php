@@ -3,6 +3,8 @@ ini_set('memory_limit', '2G');
 require __DIR__.'/../lib/base.php';
 date_default_timezone_set('America/Los_Angeles');
 
+define('DEBUG', false);
+
 list($cookie, $cookie_name) = login(WORDPRESS_USER, WORDPRESS_PASS);
 
 $t = time();
@@ -48,15 +50,22 @@ usort($filter, function($a, $b) {
 });
 $begin = time() - 7 * 24 * 3600;
 foreach ($filter as $row) {
-    $sql = "SELECT COUNT(1) FROM `pushed_log` WHERE `src_id` = '${row['id']}' AND `pushed` >= '$begin'";
-    list($cnt) = $pdo->query($sql)->fetch(PDO::FETCH_NUM);
-    if ($cnt) continue;
+    if (!DEBUG) {
+        $sql = "SELECT COUNT(1) FROM `pushed_log` WHERE `src_id` = '${row['id']}' AND `pushed` >= '$begin'";
+        list($cnt) = $pdo->query($sql)->fetch(PDO::FETCH_NUM);
+        if ($cnt) continue;
+    }
     $str = output_repo($row);
     do {
         list($status, $header, $body) = curl_post('https://api.github.com/markdown?access_token='.GITHUB_FETCH_REPOS_TOKEN, json_encode(array(
             'text' => $str
         )));
     } while ($status != 200);
+    $desc = output_description($row);
+    if (!empty($desc)) {
+        $body .= "<!--more-->\n".
+                 "<blockquote>$desc</blockquote>";
+    }
     create_post($cookie, $cookie_name, $row['full_name'], $body, array($row['language']));
     $obj = array(
         'src_id'    => $row['id'],
@@ -82,20 +91,35 @@ function output_repo(&$obj) {
     $pdo = pdo();
     $sql = "SELECT `uname`, `full_name`, `homepage`, `language`, `default_branch` FROM `repos_log` WHERE `id` = '${obj['id']}' ORDER BY `pushed` DESC LIMIT 1";
     $obj = array_merge($obj, $pdo->query($sql)->fetch(PDO::FETCH_ASSOC));
-    $str = "# url\n\n".
-           "https://github.com/${obj['full_name']}\n\n";
+    $str = "# ${obj['full_name']}\n\n".
+           "${obj['description']}\n\n";
     if (!empty($obj['homepage']))
-        $str .= "# homepage\n\n".
+        $str .= "## Homepage\n\n".
                 "[${obj['homepage']}](${obj['homepage']})\n\n";
     if (!empty($obj['language']))
-        $str .= "#language\n\n".
+        $str .= "## Language\n\n".
                 "${obj['language']}\n\n";
-    $str .= "# Rank\n\n".
+    $str .= "## Rank\n\n".
             "forks: **${obj['forks_cnt']}** stars: **${obj['stars_cnt']}** watch: **${obj['watch_cnt']}** rank: **${obj['rank']}**\n\n";
-    $str .= "# description\n\n".
-            $obj['description']."\n\n";
-    # TODO: append README.md from default_branch
+    $str .= "## Description\n\n";
     return $str;
+}
+function output_description($obj) {
+    do {
+        list($status, $header, $body) = curl_get("https://raw.githubusercontent.com/${obj['full_name']}/${obj['default_branch']}/README.md");
+    } while ($status != 404 and $status != 200);
+    $ret = '';
+    if ($status == 200) {
+        $content = $body;
+        do {
+            list($status, $header, $ret) = curl_post('https://api.github.com/markdown?access_token='.GITHUB_FETCH_REPOS_TOKEN, json_encode(array(
+                'text' => $content,
+                'mode' => 'gfm',
+                'context' => $obj['full_name']
+            )));
+        } while ($status != 200);
+    }
+    return $ret;
 }
 function login($user, $pass) {
     list($status, $header, $body) = curl_get(WORDPRESS_HOST.'/?json=get_nonce&controller=user&method=generate_auth_cookie');
@@ -112,6 +136,9 @@ function categories_convert($cats) {
         switch ($cat) {
         case 'C++':
             $cat = 'c-2';
+            break;
+        case 'C#':
+            $cat = 'c-3';
             break;
         }
     } unset($cat);
