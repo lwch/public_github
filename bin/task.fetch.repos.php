@@ -39,22 +39,23 @@ function parse($header, $body) {
         list($cnt) = $pdo->query($sql)->fetch(PDO::FETCH_NUM);
         if ($cnt) continue; # skip
         $repo = array(
-            'id'          => $item['id'],
-            'uid'         => $item['owner']['id'],
-            'uname'       => $item['owner']['login'],
-            'name'        => $item['name'],
-            'description' => $item['description'],
-            'full_name'   => $item['full_name'],
-            'private'     => $item['private'],
-            'fork'        => $item['fork'],
-            'created'     => $item['created_at'],
-            'updated'     => $item['updated_at'],
-            'pushed'      => $item['pushed_at'],
-            'homepage'    => $item['homepage'],
-            'stars_cnt'   => $item['stargazers_count'],
-            'watch_cnt'   => $item['watchers_count'],
-            'forks_cnt'   => $item['forks_count'],
-            'language'    => $item['language']
+            'id'             => $item['id'],
+            'uid'            => $item['owner']['id'],
+            'uname'          => $item['owner']['login'],
+            'name'           => $item['name'],
+            'description'    => $item['description'],
+            'full_name'      => $item['full_name'],
+            'private'        => $item['private'],
+            'fork'           => $item['fork'],
+            'created'        => $item['created_at'],
+            'updated'        => $item['updated_at'],
+            'pushed'         => $item['pushed_at'],
+            'homepage'       => $item['homepage'],
+            'stars_cnt'      => $item['stargazers_count'],
+            'watch_cnt'      => $item['watchers_count'],
+            'forks_cnt'      => $item['forks_count'],
+            'language'       => $item['language'],
+            'default_branch' => $item['default_branch']
         );
         insert('repos_log', $repo);
         $user = array(
