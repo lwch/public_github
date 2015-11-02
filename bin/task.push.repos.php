@@ -4,6 +4,7 @@ require __DIR__.'/../lib/base.php';
 date_default_timezone_set('America/Los_Angeles');
 
 define('DEBUG', false);
+define('MAX_PUBLISH_CNT', 100);
 
 openlog('task.push.repos.php', LOG_NDELAY|LOG_PID, LOG_CRON);
 list($cookie, $cookie_name) = login(WORDPRESS_USER, WORDPRESS_PASS);
@@ -94,7 +95,7 @@ while ($published == 0) {
             'rank'      => $row['rank']
         );
         insert('pushed_log', $obj);
-        ++$published;
+        if (++$published >= MAX_PUBLISH_CNT) break;
     }
     if ($published == 0) {
         rank_reduce($rank_ratio);
