@@ -177,6 +177,9 @@ function categories_convert($cats) {
         case 'C#':
             $cat = 'c-3';
             break;
+        case 'F#':
+            $cat = 'f';
+            break;
         }
     } unset($cat);
     return $cats;
