@@ -153,7 +153,7 @@ function output_description($obj) {
                 'mode' => 'gfm',
                 'context' => $obj['full_name']
             )));
-        } while ($status != 200);
+        } while ($status != 200 and $status != 400);
     }
     return $ret;
 }
