@@ -20,7 +20,7 @@ syslog(LOG_INFO, 'now start task.push.repos.php');
 log_ratio($rank_ratio, 'start ratio');
 
 $t = time();
-$start = $t - 3600;
+$start = $t - 600;
 
 $str_start = date('c', $start);
 $pdo = pdo();
@@ -179,6 +179,9 @@ function categories_convert($cats) {
             break;
         case 'F#':
             $cat = 'f';
+            break;
+        case 'Visual Basic':
+            $cat = 'visual-basic';
             break;
         }
     } unset($cat);
