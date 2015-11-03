@@ -183,6 +183,9 @@ function categories_convert($cats) {
         case 'Visual Basic':
             $cat = 'visual-basic';
             break;
+        case 'Common Lisp':
+            $cat = 'common-lisp';
+            break;
         }
     } unset($cat);
     return $cats;
