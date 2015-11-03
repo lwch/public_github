@@ -192,6 +192,9 @@ function categories_convert($cats) {
         case 'API Blueprint':
             $cat = 'api-blueprint';
             break;
+        case 'Standard ML':
+            $cat = 'standard-ml';
+            break;
         }
     } unset($cat);
     return $cats;
