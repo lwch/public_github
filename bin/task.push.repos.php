@@ -189,6 +189,9 @@ function categories_convert($cats) {
         case 'Emacs Lisp':
             $cat = 'emacs-lisp';
             break;
+        case 'API Blueprint':
+            $cat = 'api-blueprint';
+            break;
         }
     } unset($cat);
     return $cats;
