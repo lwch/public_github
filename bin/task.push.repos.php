@@ -186,6 +186,9 @@ function categories_convert($cats) {
         case 'Common Lisp':
             $cat = 'common-lisp';
             break;
+        case 'Emacs Lisp':
+            $cat = 'emacs-lisp';
+            break;
         }
     } unset($cat);
     return $cats;
