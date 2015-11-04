@@ -210,6 +210,9 @@ function categories_convert($cats) {
         case 'OpenEdge ABL':
             $cat = 'openedge-abl';
             break;
+        case 'Objective-C++':
+            $cat = 'objective-c-2';
+            break;
         }
     } unset($cat);
     return $cats;
