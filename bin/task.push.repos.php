@@ -198,6 +198,9 @@ function categories_convert($cats) {
         case 'Pure Data':
             $cat = 'pure-data';
             break;
+        case 'Web Ontology Language':
+            $cat = 'web-ontology-language';
+            break;
         }
     } unset($cat);
     return $cats;
