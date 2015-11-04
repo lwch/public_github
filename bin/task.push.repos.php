@@ -207,6 +207,9 @@ function categories_convert($cats) {
         case 'DIGITAL Command Language':
             $cat = 'digital-command-language';
             break;
+        case 'OpenEdge ABL':
+            $cat = 'openedge-abl';
+            break;
         }
     } unset($cat);
     return $cats;
