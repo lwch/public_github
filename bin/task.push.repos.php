@@ -195,6 +195,9 @@ function categories_convert($cats) {
         case 'Standard ML':
             $cat = 'standard-ml';
             break;
+        case 'Pure Data':
+            $cat = 'pure-data';
+            break;
         }
     } unset($cat);
     return $cats;
