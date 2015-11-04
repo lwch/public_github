@@ -201,6 +201,9 @@ function categories_convert($cats) {
         case 'Web Ontology Language':
             $cat = 'web-ontology-language';
             break;
+        case 'Game Maker Language':
+            $cat = 'game-maker-language';
+            break;
         }
     } unset($cat);
     return $cats;
