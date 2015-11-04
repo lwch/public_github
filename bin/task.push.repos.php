@@ -204,6 +204,9 @@ function categories_convert($cats) {
         case 'Game Maker Language':
             $cat = 'game-maker-language';
             break;
+        case 'DIGITAL Command Language':
+            $cat = 'digital-command-language';
+            break;
         }
     } unset($cat);
     return $cats;
