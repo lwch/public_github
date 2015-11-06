@@ -19,6 +19,7 @@ CREATE TABLE `repos_log`(
     KEY `idx_id`(`id`),
     KEY `idx_created`(`created`),
     KEY `idx_updated`(`updated`),
+    KEY `idx_pushed`(`pushed`),
     KEY `idx_name`(`uname`, `name`),
     KEY `idx_fullname`(`full_name`),
     KEY `idx_language`(`language`),
