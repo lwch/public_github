@@ -20,7 +20,7 @@ syslog(LOG_INFO, 'now start task.push.repos.php');
 log_ratio($rank_ratio, 'start ratio');
 
 $t = time();
-$start = $t - 1800;
+$start = $t - 600;
 
 $str_start = date('c', $start);
 $pdo = pdo();
