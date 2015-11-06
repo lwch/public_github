@@ -4,7 +4,7 @@ require __DIR__.'/../lib/base.php';
 date_default_timezone_set('America/Los_Angeles');
 
 define('DEBUG', false);
-define('MAX_PUBLISH_CNT', 100);
+define('MAX_PUBLISH_CNT', 10);
 
 openlog('task.push.repos.php', LOG_NDELAY|LOG_PID, LOG_CRON);
 list($cookie, $cookie_name) = login(WORDPRESS_USER, WORDPRESS_PASS);
@@ -43,7 +43,7 @@ foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) as $row) {
 syslog(LOG_INFO, "max_forks: $max_forks max_stars: $max_stars max_watch: $max_watch, max_push: $max_cnt");
 
 $sql = "SELECT
-        `id`, `description`,
+        `id`, LENGTH(`description`) AS `desc_len`,
         MAX(`forks_cnt`) AS `forks_cnt`,
         MAX(`stars_cnt`) AS `stars_cnt`,
         MAX(`watch_cnt`) AS `watch_cnt`,
@@ -53,49 +53,35 @@ $sql = "SELECT
         GROUP BY `id`";
 $repos = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 $published = 0;
+$prev = array();
 while ($published == 0) {
     $filter = array();
     foreach ($repos as $row) {
         $row['rank'] = rank($row, $max_forks, $max_stars, $max_watch, $max_cnt, $rank_ratio);
         $row['rank'] = (int)($row['rank'] * 1000000);
-        if ($row['rank'] >= $rank_ratio['rank']) $filter[] = $row;
+        if ($row['rank'] >= $rank_ratio['rank']) {
+            if (in_array($row['id'], $prev)) continue;
+            $filter[$row['id']] = $row;
+            $prev[] = $row['id'];
+        }
     }
-    usort($filter, function($a, $b) {
+    uasort($filter, function($a, $b) {
         return $a['rank'] < $b['rank'] ? 1 : -1;
     });
     $begin = time() - 7 * 24 * 3600;
-    foreach ($filter as $row) {
+    foreach (array_chunk($filter, 1000) as $objs) {
+        $ids = array_column($objs, 'id');
         if (!DEBUG) {
-            $sql = "SELECT COUNT(1) FROM `pushed_log` WHERE `src_id` = '${row['id']}' AND `pushed` >= '$begin'";
-            list($cnt) = $pdo->query($sql)->fetch(PDO::FETCH_NUM);
-            if ($cnt) {
-                syslog(LOG_INFO, "${row['id']} has been published in this week, skiped");
-                continue;
-            }
+            $sql = "SELECT `src_id` FROM `pushed_log` WHERE `src_id` IN('".implode("','", $ids)."') AND `pushed` >= '$begin'";
+            $have = $pdo->query($sql)->fetchAll(PDO::FETCH_NUM);
+            $have = array_column($have, 0);
+            $ids = array_diff($ids, $have);
+            if (count($ids) == 0) continue;
         }
-        $str = output_repo($row);
-        do {
-            list($status, $header, $body) = curl_post('https://api.github.com/markdown?access_token='.GITHUB_FETCH_REPOS_TOKEN, json_encode(array(
-                'text' => $str
-            )));
-        } while ($status != 200);
-        $desc = output_description($row);
-        if (!empty($desc)) {
-            $body .= "<!--more-->\n".
-                     "<blockquote>$desc</blockquote>";
+        foreach ($ids as $id) {
+            append($filter[$id], $cookie, $cookie_name);
+            if (++$published >= MAX_PUBLISH_CNT) break;
         }
-        create_post($row, $cookie, $cookie_name, $row['full_name'], $body, array($row['language']));
-        $obj = array(
-            'src_id'    => $row['id'],
-            'full_name' => $row['full_name'],
-            'language'  => $row['language'],
-            'forks_cnt' => $row['forks_cnt'],
-            'stars_cnt' => $row['stars_cnt'],
-            'watch_cnt' => $row['watch_cnt'],
-            'rank'      => $row['rank']
-        );
-        insert('pushed_log', $obj);
-        if (++$published >= MAX_PUBLISH_CNT) break;
     }
     if ($published == 0) {
         rank_reduce($rank_ratio);
@@ -107,7 +93,7 @@ syslog(LOG_INFO, "======= all done, published $published");
 
 function rank($obj, $max_forks, $max_stars, $max_watch, $max_cnt, $ratio) {
     $pfx = 0;
-    if (strlen($obj['description']) > 20) $pfx = $ratio['desc'];
+    if ($obj['desc_len'] > 20) $pfx = $ratio['desc'];
     return $obj['forks_cnt'] / $max_forks * $ratio['forks'] +
            $obj['stars_cnt'] / $max_stars * $ratio['stars'] +
            $obj['watch_cnt'] / $max_watch * $ratio['watch'] +
@@ -123,7 +109,7 @@ function rank_reduce(&$ratio) {
 }
 function output_repo(&$obj) {
     $pdo = pdo();
-    $sql = "SELECT `uname`, `full_name`, `homepage`, `language`, `default_branch` FROM `repos_log` WHERE `id` = '${obj['id']}' ORDER BY `pushed` DESC LIMIT 1";
+    $sql = "SELECT `description`, `uname`, `full_name`, `homepage`, `language`, `default_branch` FROM `repos_log` WHERE `id` = '${obj['id']}' ORDER BY `pushed` DESC LIMIT 1";
     $obj = array_merge($obj, $pdo->query($sql)->fetch(PDO::FETCH_ASSOC));
     $str = "# ${obj['full_name']}\n\n".
            "${obj['description']}\n\n".
@@ -142,7 +128,8 @@ function output_repo(&$obj) {
 }
 function output_description($obj) {
     do {
-        list($status, $header, $body) = curl_get("https://raw.githubusercontent.com/${obj['full_name']}/${obj['default_branch']}/README.md");
+        $url = "https://raw.githubusercontent.com/${obj['full_name']}/".urlencode($obj['default_branch'])."/README.md";
+        list($status, $header, $body) = curl_get($url);
     } while ($status != 404 and $status != 200);
     $ret = '';
     if ($status == 200) {
@@ -268,4 +255,28 @@ function publish_post($cookie, $cookie_name, $id) {
 }
 function log_ratio($ratio, $pfx) {
     syslog(LOG_INFO, "$pfx: ${ratio['forks']}[forks] ${ratio['stars']}[stars] ${ratio['watch']}[watch] ${ratio['desc']}[desc] ${ratio['push']}[push] ${ratio['rank']}[rank]");
+}
+function append($row, $cookie, $cookie_name) {
+    $str = output_repo($row);
+    do {
+        list($status, $header, $body) = curl_post('https://api.github.com/markdown?access_token='.GITHUB_FETCH_REPOS_TOKEN, json_encode(array(
+            'text' => $str
+        )));
+    } while ($status != 200);
+    $desc = output_description($row);
+    if (!empty($desc)) {
+        $body .= "<!--more-->\n".
+                 "<blockquote>$desc</blockquote>";
+    }
+    create_post($row, $cookie, $cookie_name, $row['full_name'], $body, array($row['language']));
+    $obj = array(
+        'src_id'    => $row['id'],
+        'full_name' => $row['full_name'],
+        'language'  => $row['language'],
+        'forks_cnt' => $row['forks_cnt'],
+        'stars_cnt' => $row['stars_cnt'],
+        'watch_cnt' => $row['watch_cnt'],
+        'rank'      => $row['rank']
+    );
+    insert('pushed_log', $obj);
 }
