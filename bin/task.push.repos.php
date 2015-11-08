@@ -200,6 +200,9 @@ function categories_convert($cats) {
         case 'Objective-C++':
             $cat = 'objective-c-2';
             break;
+        case 'Propeller Spin':
+            $cat = 'propeller-spin';
+            break;
         }
     } unset($cat);
     return $cats;
