@@ -88,6 +88,10 @@ while ($published == 0) {
         syslog(LOG_INFO, 'no repo matched');
         log_ratio($rank_ratio, 'now ratio reduce to');
     }
+    if ($rank_ratio['rank'] <= 2000) {
+        syslog(LOG_INFO, 'rank too low');
+        break;
+    }
 }
 syslog(LOG_INFO, "======= all done, published $published");
 
