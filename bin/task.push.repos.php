@@ -209,6 +209,9 @@ function categories_convert($cats) {
         case 'Grammatical Framework':
             $cat = 'grammatical-framework';
             break;
+        case 'IGOR Pro':
+            $cat = 'igor-pro';
+            break;
         }
     } unset($cat);
     return $cats;
