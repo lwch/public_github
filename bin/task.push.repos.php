@@ -1,5 +1,5 @@
 <?php
-ini_set('memory_limit', '2G');
+ini_set('memory_limit', '1G');
 require __DIR__.'/../lib/base.php';
 date_default_timezone_set('America/Los_Angeles');
 
@@ -202,6 +202,9 @@ function categories_convert($cats) {
             break;
         case 'Propeller Spin':
             $cat = 'propeller-spin';
+            break;
+        case 'Protocol Buffer':
+            $cat = 'protocol-buffer';
             break;
         }
     } unset($cat);
