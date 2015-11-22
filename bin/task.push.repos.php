@@ -206,6 +206,9 @@ function categories_convert($cats) {
         case 'Protocol Buffer':
             $cat = 'protocol-buffer';
             break;
+        case 'Grammatical Framework':
+            $cat = 'grammatical-framework';
+            break;
         }
     } unset($cat);
     return $cats;
