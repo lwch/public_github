@@ -14,7 +14,7 @@ function fetch($start, $end) {
     $str_start = date('c', $start);
     $str_end   = date('c', $end);
     do {
-        $url = 'https://api.github.com/search/repositories?q=pushed:'.$str_start.'..'.$str_end.'&access_token='.GITHUB_FETCH_REPOS_TOKEN;
+        $url = 'https://api.github.com/search/repositories?q=pushed:'.$str_start.'..'.$str_end.'&per_page=100&access_token='.GITHUB_FETCH_REPOS_TOKEN;
         list($status, $header, $body) = curl_get($url);
         if ($status == 403) continue;
         $body = json_decode($body, true);
