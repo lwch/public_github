@@ -4,20 +4,11 @@ require __DIR__.'/../lib/base.php';
 date_default_timezone_set('America/Los_Angeles');
 
 define('DEBUG', false);
-define('MAX_PUBLISH_CNT', 10);
+define('MAX_PUBLISH_CNT', 1);
 
 openlog('task.push.repos.php', LOG_NDELAY|LOG_PID, LOG_CRON);
 list($cookie, $cookie_name) = login(WORDPRESS_USER, WORDPRESS_PASS);
-$rank_ratio = array(
-    'forks' => 0.2,
-    'stars' => 0.2,
-    'watch' => 0.2,
-    'desc'  => 0.1,
-    'push'  => 0.3,
-    'rank'  => 200000
-);
 syslog(LOG_INFO, 'now start task.push.repos.php');
-log_ratio($rank_ratio, 'start ratio');
 
 $t = time();
 $start = $t - 600;
@@ -25,92 +16,37 @@ $start = $t - 600;
 $str_start = date('c', $start);
 $pdo = pdo();
 
-$sql = "SELECT
-        MAX(`forks_cnt`) AS `forks_cnt`,
-        MAX(`stars_cnt`) AS `stars_cnt`,
-        MAX(`watch_cnt`) AS `watch_cnt`,
-        COUNT(1) AS `cnt`
-        FROM `repos_log`
-        WHERE `pushed` >= '$start'
-        GROUP BY `id`";
-$max_forks = $max_stars = $max_watch = $max_cnt = 0;
-foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) as $row) {
-    if ($row['forks_cnt'] > $max_forks) $max_forks = $row['forks_cnt'];
-    if ($row['stars_cnt'] > $max_stars) $max_stars = $row['stars_cnt'];
-    if ($row['watch_cnt'] > $max_watch) $max_watch = $row['watch_cnt'];
-    if ($row['cnt']       > $max_cnt)   $max_cnt   = $row['cnt'];
-}
-syslog(LOG_INFO, "max_forks: $max_forks max_stars: $max_stars max_watch: $max_watch, max_push: $max_cnt");
-
-$sql = "SELECT
-        `id`, LENGTH(`description`) AS `desc_len`,
-        MAX(`forks_cnt`) AS `forks_cnt`,
-        MAX(`stars_cnt`) AS `stars_cnt`,
-        MAX(`watch_cnt`) AS `watch_cnt`,
-        COUNT(1) AS `cnt`
-        FROM `repos_log`
-        WHERE `pushed` >= '$start'
-        GROUP BY `id`";
-$repos = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 $published = 0;
-$prev = array();
+$s = 0;
 while ($published == 0) {
-    $filter = array();
-    foreach ($repos as $row) {
-        $row['rank'] = rank($row, $max_forks, $max_stars, $max_watch, $max_cnt, $rank_ratio);
-        $row['rank'] = (int)($row['rank'] * 1000000);
-        if ($row['rank'] >= $rank_ratio['rank']) {
-            if (in_array($row['id'], $prev)) continue;
-            $filter[$row['id']] = $row;
-            $prev[] = $row['id'];
-        }
-    }
-    uasort($filter, function($a, $b) {
-        return $a['rank'] < $b['rank'] ? 1 : -1;
-    });
+    $sql = "SELECT
+            `id`,
+            `forks_cnt`,
+            `stars_cnt`,
+            `watch_cnt`,
+            COUNT(1) AS `cnt`
+            FROM `repos_log`
+            WHERE `pushed` >= '$str_start'
+            GROUP BY `id`
+            ORDER BY `cnt` DESC
+            LIMIT $s, ".(MAX_PUBLISH_CNT * 100);
+    $repos = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    if (empty($repos)) break;
     $begin = time() - 7 * 24 * 3600;
-    foreach (array_chunk($filter, 1000) as $objs) {
-        $ids = array_column($objs, 'id');
-        if (!DEBUG) {
-            $sql = "SELECT `src_id` FROM `pushed_log` WHERE `src_id` IN('".implode("','", $ids)."') AND `pushed` >= '$begin'";
-            $have = $pdo->query($sql)->fetchAll(PDO::FETCH_NUM);
-            $have = array_column($have, 0);
-            $ids = array_diff($ids, $have);
-            if (count($ids) == 0) continue;
-        }
-        foreach ($ids as $id) {
-            append($filter[$id], $cookie, $cookie_name);
-            if (++$published >= MAX_PUBLISH_CNT) break;
-        }
+    $ids = array_column($repos, 'id');
+    $str_begin = date('c', $begin);
+    $sql = "SELECT `src_id`, `pushed` FROM `pushed_log` WHERE `src_id` IN('".implode("','", $ids)."') AND `pushed` >= '$str_begin'";
+    $have = array_column($pdo->query($sql)->fetchAll(PDO::FETCH_NUM), 0);
+    foreach ($repos as $obj) {
+        if (in_array($obj['id'], $have)) continue;
+        append($obj, $cookie, $cookie_name);
+        if (++$published >= MAX_PUBLISH_CNT) break;
     }
-    if ($published == 0) {
-        rank_reduce($rank_ratio);
-        syslog(LOG_INFO, 'no repo matched');
-        log_ratio($rank_ratio, 'now ratio reduce to');
-    }
-    if ($rank_ratio['rank'] <= 2000) {
-        syslog(LOG_INFO, 'rank too low');
-        break;
-    }
+    syslog(LOG_INFO, "published $published");
+    $s += count($repos);
 }
 syslog(LOG_INFO, "======= all done, published $published");
 
-function rank($obj, $max_forks, $max_stars, $max_watch, $max_cnt, $ratio) {
-    $pfx = 0;
-    if ($obj['desc_len'] > 20) $pfx = $ratio['desc'];
-    return $obj['forks_cnt'] / $max_forks * $ratio['forks'] +
-           $obj['stars_cnt'] / $max_stars * $ratio['stars'] +
-           $obj['watch_cnt'] / $max_watch * $ratio['watch'] +
-           $obj['cnt']       / $max_cnt   * $ratio['push'] + $pfx;
-}
-function rank_reduce(&$ratio) {
-    $ratio['forks'] /= 2;
-    $ratio['stars'] /= 2;
-    $ratio['watch'] /= 2;
-    $ratio['desc']  /= 2;
-    $ratio['push']   = 1 - $ratio['forks'] - $ratio['stars'] - $ratio['watch'] - $ratio['desc'] - $ratio['push'];
-    $ratio['rank']  /= 2;
-}
 function output_repo(&$obj) {
     $pdo = pdo();
     $sql = "SELECT `description`, `uname`, `full_name`, `homepage`, `language`, `default_branch` FROM `repos_log` WHERE `id` = '${obj['id']}' ORDER BY `pushed` DESC LIMIT 1";
@@ -126,7 +62,7 @@ function output_repo(&$obj) {
         $str .= "## Language\n\n".
                 "${obj['language']}\n\n";
     $str .= "## Rank\n\n".
-            "forks: **${obj['forks_cnt']}** stars: **${obj['stars_cnt']}** watch: **${obj['watch_cnt']}** push: **${obj['cnt']}** rank: **${obj['rank']}**\n\n";
+            "forks: **${obj['forks_cnt']}** stars: **${obj['stars_cnt']}** watch: **${obj['watch_cnt']}** push: **${obj['cnt']}**\n\n";
     $str .= "## Description\n\n";
     return $str;
 }
@@ -248,7 +184,7 @@ function create_post($obj, $cookie, $cookie_name, $title, $content, $categories)
         return true;
     }
     if (publish_post($cookie, $cookie_name, $id)) {
-        syslog(LOG_INFO, "${obj['full_name']} has been published, ${obj['forks_cnt']}[forks] ${obj['stars_cnt']}[stars] ${obj['watch_cnt']}[watch] ${obj['cnt']}[push] ${obj['rank']}[rank]");
+        syslog(LOG_INFO, "${obj['full_name']} has been published, ${obj['forks_cnt']}[forks] ${obj['stars_cnt']}[stars] ${obj['watch_cnt']}[watch] ${obj['cnt']}[push]");
         return true;
     } else {
         syslog(LOG_ERR, "${obj['full_name']} publish failed");
@@ -269,9 +205,6 @@ function publish_post($cookie, $cookie_name, $id) {
     ), array($cookie_name.'='.$cookie));
     return $status == 200;
 }
-function log_ratio($ratio, $pfx) {
-    syslog(LOG_INFO, "$pfx: ${ratio['forks']}[forks] ${ratio['stars']}[stars] ${ratio['watch']}[watch] ${ratio['desc']}[desc] ${ratio['push']}[push] ${ratio['rank']}[rank]");
-}
 function append($row, $cookie, $cookie_name) {
     $str = output_repo($row);
     do {
@@ -285,14 +218,14 @@ function append($row, $cookie, $cookie_name) {
                  "<blockquote>$desc</blockquote>";
     }
     create_post($row, $cookie, $cookie_name, $row['full_name'], $body, array($row['language']));
+    syslog(LOG_INFO, "${row['full_name']} has been published");
     $obj = array(
         'src_id'    => $row['id'],
         'full_name' => $row['full_name'],
         'language'  => $row['language'],
         'forks_cnt' => $row['forks_cnt'],
         'stars_cnt' => $row['stars_cnt'],
-        'watch_cnt' => $row['watch_cnt'],
-        'rank'      => $row['rank']
+        'watch_cnt' => $row['watch_cnt']
     );
     insert('pushed_log', $obj);
 }
