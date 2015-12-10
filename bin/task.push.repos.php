@@ -152,6 +152,9 @@ function categories_convert($cats) {
         case 'IGOR Pro':
             $cat = 'igor-pro';
             break;
+        case 'Jupyter Notebook':
+            $cat = 'jupyter-notebook';
+            break;
         }
     } unset($cat);
     return $cats;
