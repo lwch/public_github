@@ -155,6 +155,9 @@ function categories_convert($cats) {
         case 'Jupyter Notebook':
             $cat = 'jupyter-notebook';
             break;
+        case 'Component Pascal':
+            $cat = 'component-pascal';
+            break;
         }
     } unset($cat);
     return $cats;
