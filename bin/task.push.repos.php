@@ -161,6 +161,9 @@ function categories_convert($cats) {
         case 'Ragel in Ruby Host':
             $cat = 'ragel-in-ruby-host';
             break;
+        case 'AGS Script':
+            $cat = 'ags-script';
+            break;
         }
     } unset($cat);
     return $cats;
