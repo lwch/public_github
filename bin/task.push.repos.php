@@ -158,6 +158,9 @@ function categories_convert($cats) {
         case 'Component Pascal':
             $cat = 'component-pascal';
             break;
+        case 'Ragel in Ruby Host':
+            $cat = 'ragel-in-ruby-host';
+            break;
         }
     } unset($cat);
     return $cats;
